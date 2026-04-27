@@ -1,0 +1,788 @@
+---
+title: "Health Inequalities in England: Deprivation and Life Expectancy Analysis"
+author: "Usman Adamu"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE,
+                      fig.width = 10,
+                      fig.height = 6)
+library(fingertipsR)
+library(tidyverse)
+library(tmap)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+## Introduction
+
+Health inequalities remain one of the most persistent challenges facing 
+public health in England. Life expectancy — a fundamental measure of 
+population health — varies substantially across geographic areas and 
+socioeconomic groups, reflecting deep-rooted structural inequalities in 
+the social determinants of health. The relationship between deprivation 
+and life expectancy has been extensively documented, with the Marmot Review 
+establishing that life expectancy follows a social gradient: the more 
+deprived the area, the shorter the lives of the people who live there 
+(Marmot et al., 2010).
+
+This report presents an epidemiological analysis of life expectancy trends 
+and health inequalities in England using data from the Office for Health 
+Inequalities and Disparities (OHID) Fingertips platform. The analysis 
+examines national trends in life expectancy by sex, geographic variation 
+across local authorities, the relationship between deprivation and life 
+expectancy, and inequality in life expectancy between the most and least 
+deprived areas.
+
+### Research Questions
+
+1. How has life expectancy changed in England between 2001 and 2024 
+   for males and females?
+2. Which local authorities have the highest and lowest life expectancy 
+   in England?
+3. What is the geographic distribution of life expectancy across 
+   English local authorities?
+4. Is there a statistically significant relationship between 
+   deprivation and life expectancy at local authority level?
+5. Does the relationship between deprivation and life expectancy 
+   differ by sex?
+6. How does inequality in life expectancy between the most and least 
+   deprived areas vary over time?
+7. How does total life expectancy compare to healthy life expectancy, 
+   and how has this gap changed over time?
+
+## Data and Methods
+
+### Data Source
+
+Data were obtained from the OHID Fingertips platform using the 
+fingertipsR package in R. Four indicators were extracted at local 
+authority level (Counties and Unitary Authorities from April 2023):
+
+- **Life expectancy at birth** (Indicator 90366)
+- **Healthy life expectancy at birth** (Indicator 90362)
+- **Deprivation score — IMD 2019** (Indicator 93553)
+- **Inequality in life expectancy at birth** (Indicator 92901)
+
+### Packages Used
+
+```{r packages, include=FALSE}
+# FIX: marked include=FALSE — packages are already loaded in setup chunk above;
+# this chunk is retained for transparency but suppressed from the rendered output.
+library(fingertipsR)
+library(tidyverse)
+library(tmap)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+### Data Loading and Preparation
+
+```{r load-data, results='hide'}
+# FIX: added results='hide' to suppress cat() output from rendered document.
+life_expectancy <- fingertips_data(
+  IndicatorID = 90366,
+  AreaTypeID = 502)
+
+healthy_life_expectancy <- fingertips_data(
+  IndicatorID = 90362,
+  AreaTypeID = 502)
+
+deprivation <- fingertips_data(
+  IndicatorID = 93553,
+  AreaTypeID = 502)
+
+inequality_le <- fingertips_data(
+  IndicatorID = 92901,
+  AreaTypeID = 502)
+
+# Clean England trend data
+le_england <- life_expectancy %>%
+  dplyr::filter(AreaName == "England",
+                Sex %in% c("Male", "Female"),
+                stringr::str_detect(Timeperiod, "-")) %>%
+  dplyr::select(Timeperiod, Sex, Value, 
+                LowerCI95.0limit, UpperCI95.0limit) %>%
+  dplyr::filter(!is.na(Value))
+
+# Clean local authority data - most recent period
+le_la <- life_expectancy %>%
+  dplyr::filter(AreaType == "Counties & UAs (from Apr 2023)",
+                Sex == "Female",
+                Timeperiod == "2022 - 24") %>%
+  dplyr::select(AreaName, Value, 
+                LowerCI95.0limit, UpperCI95.0limit) %>%
+  dplyr::filter(!is.na(Value))
+
+# Clean deprivation data
+dep_la <- deprivation %>%
+  dplyr::filter(AreaType == "Counties & UAs (from Apr 2023)") %>%
+  dplyr::select(AreaName, Value) %>%
+  dplyr::rename(deprivation_score = Value) %>%
+  dplyr::filter(!is.na(deprivation_score))
+
+# Check missing values
+cat("Missing values in life expectancy data:", 
+    sum(is.na(le_england$Value)), "\n")
+cat("Missing values in deprivation data:", 
+    sum(is.na(dep_la$deprivation_score)), "\n")
+```
+
+## Results
+
+### 1. National Life Expectancy Trend 2001–2024
+
+The chart below shows how life expectancy at birth has changed in 
+England over two decades, by sex.
+
+```{r national-trend}
+# FIX: replaced deprecated size= with linewidth= in geom_line.
+ggplot(le_england, aes(x = Timeperiod, y = Value, 
+                        colour = Sex, group = Sex)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2.5) +
+  scale_colour_manual(values = c("Male" = "#2196F3",
+                                 "Female" = "#FF5722")) +
+  labs(title = "Life Expectancy at Birth in England 2001\u20132024",
+       subtitle = "By sex, three-year rolling averages",
+       x = "Period",
+       y = "Life Expectancy (years)",
+       colour = "Sex") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Life expectancy at birth in England increased steadily in both sexes 
+between 2001-03 and 2012-14, consistent with sustained improvements 
+in healthcare, medicines, vaccination coverage and socioeconomic 
+conditions during this period.^1,2^ However, this improvement stalled 
+markedly after 2012-14 and remained largely static until 2018-20 — 
+a pattern attributed in the literature to the effects of austerity 
+policies, stagnating income growth and widening social inequalities 
+following the 2008 financial crisis.^3^ A sharp decline in life 
+expectancy was observed in both sexes during 2019-21, most likely 
+reflecting direct and indirect mortality attributable to the COVID-19 
+pandemic, including disruption to routine healthcare services and 
+excess deaths among vulnerable populations.^4^ Partial recovery was 
+observed from 2021-23 onwards, though life expectancy had not returned 
+to pre-pandemic trajectory by the most recent data point. Throughout 
+the study period, female life expectancy consistently exceeded male 
+life expectancy by approximately three to four years, consistent with 
+established sex differentials in mortality in high-income countries.^5^ 
+It should be noted that a proportion of the observed increase in 
+recorded life expectancy over time may partly reflect improvements in 
+data completeness and reporting quality rather than true biological 
+change alone.
+
+### 2. Local Authority Variation in Life Expectancy
+
+The charts below show the local authorities with the highest and 
+lowest female life expectancy at birth in 2022-24.
+
+```{r la-variation}
+# Top 10 highest
+top_10_le <- le_la %>%
+  dplyr::arrange(desc(Value)) %>%
+  dplyr::slice_head(n = 10)
+
+# Bottom 10 lowest
+bottom_10_le <- le_la %>%
+  dplyr::arrange(Value) %>%
+  dplyr::slice_head(n = 10)
+
+# Plot top 10
+ggplot(top_10_le, aes(x = reorder(AreaName, Value), 
+                      y = Value, fill = Value)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(Value, 1)),
+            hjust = -0.2, size = 4, fontface = "bold") +
+  scale_fill_gradient(low = "#B3FFB3", high = "#00AA00") +
+  coord_flip() +
+  labs(title = "Top 10 Local Authorities: Highest Life Expectancy",
+       subtitle = "Female life expectancy at birth, 2022-24",
+       x = "",
+       y = "Life Expectancy (years)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    legend.position = "none"
+  )
+```
+
+```{r bottom-10}
+# Plot bottom 10
+ggplot(bottom_10_le, aes(x = reorder(AreaName, -Value),
+                          y = Value, fill = Value)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(Value, 1)),
+            hjust = -0.2, size = 4, fontface = "bold") +
+  scale_fill_gradient(low = "#FF0000", high = "#FFB3B3") +
+  coord_flip() +
+  labs(title = "Top 10 Local Authorities: Lowest Life Expectancy",
+       subtitle = "Female life expectancy at birth, 2022-24",
+       x = "",
+       y = "Life Expectancy (years)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 11),
+    axis.text = element_text(size = 10),
+    legend.position = "none"
+  )
+```
+
+Considerable geographic variation in life expectancy exists across 
+English local authorities, with a clear North-South gradient apparent 
+in the 2022-24 data. Local authorities with the highest life expectancy 
+are predominantly concentrated in southern England, while those with 
+the lowest are located in northern regions — consistent with the 
+established health inequality gradient documented extensively in the 
+Marmot Reviews.^3,6^ A female child born in Kensington and Chelsea 
+would expect to live approximately eight years longer than her 
+counterpart born in Blackpool — a gap that has persisted for decades 
+and reflects entrenched socioeconomic inequality rather than individual 
+circumstance.^3,6^
+
+This geographic disparity reflects deep-rooted structural differences 
+in the social determinants of health, including income, employment, 
+housing quality, educational attainment and access to services — 
+factors that cluster geographically and compound over time.^3^ It 
+should be noted that life expectancy alone provides an incomplete 
+picture of population health. Healthy life expectancy — the number 
+of years lived in good health — is an equally important measure, as 
+it captures the quality as well as the quantity of life. Evidence 
+consistently shows that the healthy life expectancy gap between 
+deprived and affluent areas is substantially wider than the life 
+expectancy gap alone, meaning that residents of the most deprived 
+areas not only live shorter lives but spend a greater proportion of 
+those lives in poor health.^7^ This compounds the burden of 
+deprivation and underscores the need for upstream policy interventions 
+targeting the social determinants of health rather than downstream 
+clinical treatment alone.
+
+### 3. Geographic Distribution of Life Expectancy
+
+The map below shows female life expectancy at birth across English 
+local authorities in 2022-24.
+
+```{r geography-map}
+# Get England boundaries
+england_boundaries <- ne_states(country = "united kingdom",
+                                returnclass = "sf") %>%
+  dplyr::filter(!region %in% c("Northern Ireland",
+                               "West Wales and the Valleys",
+                               "East Wales",
+                               "Highlands and Islands",
+                               "North Eastern",
+                               "South Western",
+                               "Eastern"))
+
+# Fix name mismatches
+le_la_map <- le_la %>%
+  dplyr::mutate(AreaName = dplyr::recode(AreaName,
+    "Windsor and Maidenhead" = "Royal Borough of Windsor and Maidenhead",
+    "County Durham" = "Durham",
+    "Bournemouth, Christchurch and Poole" = "Bournemouth",
+    "Buckinghamshire UA" = "Buckinghamshire",
+    "North Northamptonshire" = "Northamptonshire",
+    "West Northamptonshire" = "Northamptonshire",
+    "North Yorkshire UA" = "North Yorkshire",
+    "Somerset UA" = "Somerset",
+    "St. Helens" = "St Helens",
+    "Cumberland" = "Cumbria",
+    "Westmorland and Furness" = "Cumbria",
+    "City of London" = "Greater London",
+    "Wirral" = "Merseyside"
+  ))
+
+# Join to boundaries
+england_map <- england_boundaries %>%
+  dplyr::left_join(le_la_map, by = c("name" = "AreaName"))
+
+# Plot map
+tm_shape(england_map) +
+  tm_polygons(fill = "Value",
+              fill.scale = tm_scale_continuous(
+                values = "brewer.greens"),
+              fill.legend = tm_legend(
+                title = "Life Expectancy (years)")) +
+  tm_title("Female Life Expectancy at Birth by Local Authority 2022-24") +
+  tm_layout(bg.color = "#f5f5f5")
+```
+
+The choropleth map confirms the North-South gradient observed in the 
+bar charts, with darker green shading — indicating higher life 
+expectancy — concentrated predominantly in southern England, 
+particularly in London, the South East and the South West. While 
+isolated areas of higher life expectancy exist across the country, 
+the overall spatial pattern is consistent with evidence identifying 
+neighbourhood socioeconomic deprivation as a key driver of geographic 
+inequalities in health outcomes in England.^8^ Areas around Liverpool, 
+Manchester and the North East show consistently lighter shading, 
+reflecting persistently lower life expectancy in these regions. This 
+geographic clustering of poor health outcomes in northern areas is 
+not coincidental — it reflects decades of structural economic 
+disadvantage, industrial decline and underinvestment in social 
+infrastructure that have shaped the health of these populations over 
+generations.^3,6^
+
+### 4. Deprivation and Life Expectancy — Is There a Relationship?
+
+The scatter plot below examines the relationship between neighbourhood 
+deprivation and female life expectancy across English local authorities.
+
+```{r deprivation-join, results='hide'}
+# FIX: results='hide' suppresses cat() output from the rendered document.
+le_dep <- le_la %>%
+  dplyr::inner_join(dep_la, by = "AreaName")
+
+cat("Number of matched local authorities:", nrow(le_dep), "\n")
+```
+
+```{r deprivation-scatter}
+# FIX: replaced deprecated size= with linewidth= in geom_smooth.
+ggplot(le_dep, aes(x = deprivation_score, y = Value)) +
+  geom_point(colour = "#2196F3", size = 3, alpha = 0.7) +
+  geom_smooth(method = "lm", colour = "#FF5722", 
+              se = TRUE, linewidth = 1.2) +
+  labs(title = "Deprivation Score vs Female Life Expectancy",
+       subtitle = "English local authorities, 2022-24",
+       x = "Deprivation Score (IMD 2019)",
+       y = "Female Life Expectancy at Birth (years)") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+```
+
+```{r deprivation-regression, results='hide'}
+# FIX: results='hide' suppresses summary() output from the rendered document.
+le_model <- lm(Value ~ deprivation_score, data = le_dep)
+summary(le_model)
+```
+
+Linear regression confirmed a statistically significant negative 
+relationship between deprivation score and female life expectancy 
+across English local authorities (β = -0.16, p < 0.001, R² = 0.67). 
+For every one unit increase in IMD deprivation score, female life 
+expectancy decreased by approximately 0.16 years — equivalent to 
+nearly two months of life lost per deprivation unit. Deprivation 
+score alone explained 66.7% of the variance in female life expectancy 
+across local authorities, representing an exceptionally strong 
+association for a single predictor in ecological analysis. This 
+finding is consistent with the foundational evidence from the Marmot 
+Review establishing that life expectancy follows a social gradient 
+across England, and with more recent evidence demonstrating that 
+socioeconomic deprivation remains the dominant driver of geographic 
+health inequalities.^3,6^ The presence of a small number of outlying 
+local authorities — those with higher or lower life expectancy than 
+predicted by their deprivation score alone — suggests that additional 
+factors including local health service quality, population composition, 
+migration patterns and environmental conditions may modify the 
+relationship between deprivation and mortality in specific localities. 
+These findings are consistent with the established evidence that 
+place-based deprivation is among the strongest determinants of 
+population health in England.^3,8^
+
+### 5. Deprivation and Life Expectancy by Sex
+
+The scatter plots below examine whether the relationship between 
+deprivation and life expectancy differs between males and females 
+across English local authorities.
+
+```{r le-male, results='hide'}
+# FIX: results='hide' suppresses summary() output from the rendered document.
+# Get male life expectancy for latest period
+le_la_male <- life_expectancy %>%
+  dplyr::filter(AreaType == "Counties & UAs (from Apr 2023)",
+                Sex == "Male",
+                Timeperiod == "2022 - 24") %>%
+  dplyr::select(AreaName, Value) %>%
+  dplyr::rename(le_male = Value) %>%
+  dplyr::filter(!is.na(le_male))
+
+# Join with deprivation
+dep_male <- le_la_male %>%
+  dplyr::inner_join(dep_la, by = "AreaName")
+
+# Run regression
+male_model <- lm(le_male ~ deprivation_score, data = dep_male)
+summary(male_model)
+```
+
+```{r combined-scatter}
+# FIX: replaced deprecated size= with linewidth= in geom_smooth.
+# Combine male and female data
+le_la_female <- le_la %>%
+  dplyr::rename(le_value = Value) %>%
+  dplyr::mutate(Sex = "Female")
+
+le_la_male_plot <- dep_male %>%
+  dplyr::rename(le_value = le_male) %>%
+  dplyr::mutate(Sex = "Male")
+
+le_combined <- dplyr::bind_rows(
+  le_la_female %>% 
+    dplyr::inner_join(dep_la, by = "AreaName") %>%
+    dplyr::select(AreaName, le_value, deprivation_score, Sex),
+  le_la_male_plot %>%
+    dplyr::select(AreaName, le_value, deprivation_score, Sex)
+)
+
+ggplot(le_combined, aes(x = deprivation_score, y = le_value,
+                         colour = Sex)) +
+  geom_point(size = 2.5, alpha = 0.6) +
+  geom_smooth(method = "lm", se = TRUE, linewidth = 1.2) +
+  scale_colour_manual(values = c("Male" = "#2196F3",
+                                 "Female" = "#FF5722")) +
+  labs(title = "Deprivation vs Life Expectancy by Sex",
+       subtitle = "English local authorities, 2022-24",
+       x = "Deprivation Score (IMD 2019)",
+       y = "Life Expectancy at Birth (years)",
+       colour = "Sex") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+```
+
+Regression modelling confirmed statistically significant negative 
+associations between deprivation score and life expectancy in both 
+sexes (both p < 0.001). However, the strength and magnitude of this 
+relationship differed markedly between males and females. For males, 
+deprivation score explained 79.8% of the variance in life expectancy 
+(β = -0.191, R² = 0.798), compared to 66.7% for females 
+(β = -0.163, R² = 0.667). This indicates that male life expectancy 
+is more tightly determined by area-level deprivation than female 
+life expectancy, and that males lose approximately 0.03 additional 
+years of life per deprivation unit compared to females.^3,6^
+
+The combined scatter plot illustrates these differential gradients 
+clearly — while females maintain higher life expectancy than males 
+at every level of deprivation, the male regression line is visibly 
+steeper, indicating that the penalty of living in a deprived area 
+is greater for men than for women. This pattern is consistent with 
+evidence that men in deprived areas face disproportionately higher 
+mortality from cardiovascular disease, suicide, alcohol-related 
+conditions and occupational hazards — causes of death that are 
+strongly socially patterned and more prevalent among men.^9^ These 
+findings reinforce the case for gender-sensitive public health 
+strategies in deprived areas, targeting the specific causes of 
+male excess mortality alongside broader deprivation reduction 
+interventions.^3,9^
+
+### 6. Inequality in Life Expectancy Across England
+
+```{r inequality}
+# FIX: section renumbered from 5 to 6 to resolve duplicate numbering.
+# FIX: replaced deprecated size= with linewidth= in geom_line.
+inequality_clean <- inequality_le %>%
+  dplyr::filter(AreaName == "England",
+                !is.na(Value)) %>%
+  dplyr::select(Timeperiod, Sex, Value) %>%
+  dplyr::filter(Sex %in% c("Male", "Female"),
+                stringr::str_detect(Timeperiod, "-"))
+
+ggplot(inequality_clean, aes(x = Timeperiod, y = Value,
+                              colour = Sex, group = Sex)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2.5) +
+  scale_colour_manual(values = c("Male" = "#2196F3",
+                                 "Female" = "#FF5722")) +
+  labs(title = "Inequality in Life Expectancy at Birth in England",
+       subtitle = "Gap between most and least deprived areas, by sex",
+       x = "Period",
+       y = "Gap in Life Expectancy (years)",
+       colour = "Sex") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 9),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+The inequality in life expectancy between the most and least deprived 
+areas of England has remained persistently high throughout the study 
+period, showing little meaningful improvement over two decades despite 
+national policy commitments to reducing health inequalities.^3,6^ 
+Inequality was consistently greater among males than females, 
+reflecting the combined effects of higher male mortality rates in 
+deprived areas and greater male susceptibility to deprivation-related 
+causes of death including cardiovascular disease, substance misuse 
+and occupational hazards.^9^ A notable widening of the inequality gap 
+was observed following 2020, consistent with evidence that the 
+COVID-19 pandemic disproportionately affected mortality in deprived 
+areas — with death rates in the most deprived quintile of local 
+authorities exceeding those in the least deprived by over 50% during 
+the first wave.^10^ This post-pandemic widening suggests that existing 
+health inequalities were not merely preserved but actively exacerbated 
+by the pandemic and its associated disruption to healthcare services, 
+employment and social support — a finding with significant implications 
+for health inequality policy in the recovery period. The persistence 
+of this gap over two decades underscores the inadequacy of downstream 
+health interventions alone and points to the need for sustained 
+upstream action on the structural determinants of health including 
+income, housing, employment and education.^3,11^
+
+### 7. Life Expectancy vs Healthy Life Expectancy
+
+The chart below compares total life expectancy with healthy life 
+expectancy at birth in England over time, highlighting the years 
+spent in poor health.
+
+```{r healthy-le, results='hide'}
+# FIX: section renumbered from 6 to 7 to resolve duplicate numbering.
+# FIX: results='hide' suppresses head() and nrow() output from rendered document.
+
+# Get healthy life expectancy England trend
+hle_england <- healthy_life_expectancy %>%
+  dplyr::filter(AreaName == "England",
+                Sex %in% c("Male", "Female"),
+                stringr::str_detect(Timeperiod, "-"),
+                !is.na(Value)) %>%
+  dplyr::select(Timeperiod, Sex, Value) %>%
+  dplyr::rename(healthy_le = Value)
+
+# Get total life expectancy
+le_england_plot <- le_england %>%
+  dplyr::rename(total_le = Value) %>%
+  dplyr::select(Timeperiod, Sex, total_le)
+
+# Join both
+le_comparison <- le_england_plot %>%
+  dplyr::inner_join(hle_england, by = c("Timeperiod", "Sex")) %>%
+  dplyr::mutate(years_poor_health = total_le - healthy_le)
+
+# Diagnostic checks — suppressed from output
+head(le_comparison)
+nrow(le_comparison)
+```
+
+```{r healthy-le-chart}
+# Reshape for plotting
+le_long <- le_comparison %>%
+  dplyr::select(Timeperiod, Sex, healthy_le, years_poor_health) %>%
+  tidyr::pivot_longer(cols = c(healthy_le, years_poor_health),
+                      names_to = "measure",
+                      values_to = "years") %>%
+  dplyr::mutate(measure = dplyr::recode(measure,
+    "healthy_le" = "Years in Good Health",
+    "years_poor_health" = "Years in Poor Health"
+  ))
+
+ggplot(le_long, aes(x = Timeperiod, y = years,
+                    fill = measure, group = interaction(Sex, measure))) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Sex) +
+  scale_fill_manual(values = c("Years in Good Health" = "#4CAF50",
+                               "Years in Poor Health" = "#FF5722")) +
+  labs(title = "Life Expectancy vs Healthy Life Expectancy in England",
+       subtitle = "Years in good and poor health by sex, 2011-2024",
+       x = "Period",
+       y = "Years",
+       fill = "") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+```
+
+The stacked bar chart reveals a paradox at the heart of female 
+longevity in England. Despite living approximately four years longer 
+than males, females spend a greater absolute number of years in poor 
+health — approximately 19 to 21 years compared to 16 to 17 years 
+for males throughout the study period. This means that much of the 
+female longevity advantage is spent in a state of ill health, 
+disability or reduced functioning rather than in full health.^7^
+
+The years spent in poor health remained remarkably stable across 
+both sexes throughout the study period — the orange band shows 
+virtually no change from 2011-13 to 2021-23 — indicating that 
+while total life expectancy has fluctuated, the proportion of life 
+spent in poor health has not improved meaningfully over more than 
+a decade. A marginal increase in female years in poor health was 
+observed in the most recent periods from 2020-22 onwards, 
+consistent with evidence that the COVID-19 pandemic increased the 
+burden of long-term conditions and disability, particularly among 
+older women.^4^
+
+These findings have significant implications for NHS planning and 
+commissioning. The persistent gap between total and healthy life 
+expectancy — representing approximately one fifth of all years 
+lived in England — represents a substantial and largely 
+unaddressed burden of chronic disease, disability and social care 
+need. Policies focused solely on extending life expectancy without 
+addressing the quality of those additional years risk increasing 
+the demand for health and social care services without improving 
+population wellbeing.^3^ Healthy life expectancy should be adopted 
+as a primary outcome measure in public health planning alongside 
+total life expectancy.^6^
+
+## Conclusion
+
+This report examined health inequalities in England through the lens 
+of life expectancy and deprivation, using real data from the OHID 
+Fingertips platform covering local authorities across England. The 
+analysis extended beyond a simple description of trends to formally 
+quantify the relationship between deprivation and life expectancy 
+by sex, compare total and healthy life expectancy, and examine the 
+persistence of inequality over two decades.
+
+### Key Findings
+
+**1. Stalling and reversal of life expectancy gains**
+
+Life expectancy in England increased steadily from 2001 to 2012-14 
+before stalling markedly — a pattern attributed to austerity 
+policies and widening socioeconomic inequalities following the 2008 
+financial crisis.^3^ The COVID-19 pandemic caused a sharp decline 
+in life expectancy in both sexes from 2019-21, with only partial 
+recovery observed by 2022-24. Female life expectancy consistently 
+exceeded male life expectancy throughout the study period by 
+approximately three to four years.^5^
+
+**2. Stark geographic inequality**
+
+A clear North-South gradient exists in life expectancy across 
+English local authorities, with local authorities in southern 
+England — particularly London and the South East — consistently 
+showing higher life expectancy than those in northern regions. 
+A female child born in the local authority with the highest life 
+expectancy would expect to live approximately eight years longer 
+than her counterpart born in the local authority with the lowest 
+— a gap reflecting entrenched structural inequalities in the 
+social determinants of health.^3,6^
+
+**3. Deprivation as the dominant predictor — with greater impact on males**
+
+Linear regression confirmed that deprivation score explained 
+66.7% of the variance in female life expectancy (β = -0.163, 
+p < 0.001) and 79.8% of the variance in male life expectancy 
+(β = -0.191, p < 0.001) across local authorities. Males lose 
+approximately 0.03 additional years of life per deprivation unit 
+compared to females, confirming that the penalty of deprivation 
+is greater for men than for women. For every one unit increase 
+in IMD deprivation score, female life expectancy decreases by 
+0.16 years and male life expectancy by 0.19 years.^3,9^
+
+**4. The healthy life expectancy paradox**
+
+Despite living longer than males, females spend approximately 
+19 to 21 years in poor health compared to 16 to 17 years for 
+males. The years spent in poor health remained stubbornly stable 
+across both sexes from 2011 to 2023, with no meaningful 
+improvement over more than a decade. A marginal increase in 
+female years in poor health was observed post-2020, consistent 
+with the long-term health impact of the COVID-19 pandemic.^4,7^ 
+These findings highlight that extending life expectancy without 
+improving healthy life expectancy risks increasing the burden 
+of chronic disease and social care need without improving 
+population wellbeing.
+
+**5. Persistent and widening inequality**
+
+Inequality in life expectancy between the most and least deprived 
+areas has remained persistently high over two decades, with little 
+meaningful improvement despite national policy commitments to 
+reducing health inequalities.^3,6^ A notable widening of the gap 
+was observed following 2020, consistent with evidence that the 
+COVID-19 pandemic disproportionately increased mortality in the 
+most deprived areas, actively exacerbating pre-existing inequalities 
+rather than merely preserving them.^10,11^
+
+## References
+
+1. Office for National Statistics. National life tables — England 
+   [Internet]. Newport: ONS; 2024 [cited 2026 Apr 9]. Available 
+   from: https://www.ons.gov.uk
+
+2. Public Health England. Health profile for England [Internet]. 
+   London: PHE; 2019 [cited 2026 Apr 9]. Available from: 
+   https://fingertips.phe.org.uk
+
+3. Marmot M, Allen J, Boyce T, Goldblatt P, Morrison J. Health 
+   equity in England: the Marmot Review 10 years on. London: 
+   Institute of Health Equity; 2020.
+
+4. Office for National Statistics. Deaths registered weekly in 
+   England and Wales, provisional: 2020 [Internet]. Newport: 
+   ONS; 2021 [cited 2026 Apr 9]. Available from: 
+   https://www.ons.gov.uk
+
+5. Austad SN, Bartke A. Sex differences in longevity and in 
+   responses to anti-aging interventions: a mini-review. 
+   Gerontology. 2016;62(1):40–6.
+
+6. Marmot M, Allen J, Goldblatt P, Boyce T, McNeish D, 
+   Grady M. Fair society, healthy lives: the Marmot Review. 
+   London: Institute of Health Equity; 2010.
+
+7. Zaninotto P, Falaschetti E, Sacker A. Age trajectories of 
+   quality of life among older adults: results from the English 
+   Longitudinal Study of Ageing. Qual Life Res. 
+   2009;18(10):1301–9.
+
+8. Daras K, Tsakiridi A, Corcoran R, Gabbay M. Unravelling the 
+   dynamics of mental health inequalities in England: a 12-year 
+   nationwide longitudinal spatial analysis of recorded 
+   depression prevalence. SSM Popul Health. 2024;26:101669.
+
+9. Baker P, Dworkin SL, Teng S, Banks I, Shand T, Yamey G. 
+   The men's health gap: men must be included in the global 
+   health equity agenda. Bull World Health Organ. 
+   2014;92(8):618–20.
+
+10. Bambra C, Riordan R, Ford J, Matthews F. The COVID-19 
+    pandemic and health inequalities. J Epidemiol Community 
+    Health. 2020;74(11):964–8.
+
+11. Institute of Health Equity. Build back fairer: the 
+    COVID-19 Marmot Review. London: IHE; 2020.
+
+12. House of Commons Library. Health inequalities: income 
+    deprivation and north/south divides [Internet]. London: 
+    UK Parliament; 2019 [cited 2026 Apr 9]. Available from: 
+    https://commonslibrary.parliament.uk
+
+13. Health Foundation. Quantifying health inequalities in 
+    England [Internet]. London: The Health Foundation; 2022 
+    [cited 2026 Apr 9]. Available from: 
+    https://www.health.org.uk
+
+14. Wickham H, Averick M, Bryan J, Chang W, McGowan LD, 
+    François R, et al. Welcome to the tidyverse. J Open Source 
+    Softw. 2019;4(43):1686.
