@@ -74,8 +74,6 @@ authority level (Counties and Unitary Authorities from April 2023):
 - **Deprivation score — IMD 2019** (Indicator 93553)
 - **Inequality in life expectancy at birth** (Indicator 92901)
 
-### Packages Used
-
 ```{r packages, include=FALSE}
 # FIX: marked include=FALSE — packages are already loaded in setup chunk above;
 # this chunk is retained for transparency but suppressed from the rendered output.
@@ -86,8 +84,6 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 ```
-
-### Data Loading and Preparation
 
 ```{r load-data, results='hide'}
 # FIX: added results='hide' to suppress cat() output from rendered document.
