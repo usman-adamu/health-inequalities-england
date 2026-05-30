@@ -135,18 +135,6 @@ at any stage of the analysis. In accordance with standard guidance for
 analyses of publicly available, non-identifiable data, no formal ethical 
 approval was required for this study.
 
-### Data Reproducibility
-
-This analysis was conducted entirely in R using the fingertipsR package 
-to access OHID Fingertips data programmatically, ensuring that the data 
-extraction process is transparent, documented, and reproducible. All 
-indicator IDs, area type codes, and data processing steps are specified 
-in the code. The complete analysis code is available at 
-https://github.com/usman-adamu for independent verification and 
-replication. Readers should note that Fingertips data are periodically 
-updated by OHID; results may therefore differ marginally if the analysis 
-is reproduced at a later date using the same indicator IDs.
-
 ```{r packages, include=FALSE}
 library(fingertipsR)
 library(tidyverse)
@@ -891,6 +879,18 @@ confounders. Multivariable analyses using linked individual-level
 datasets, such as the Clinical Practice Research Datalink or the 
 Health Survey for England would strengthen the evidence base for 
 targeted interventions.
+
+### Data Reproducibility
+
+This analysis was conducted entirely in R using the fingertipsR package 
+to access OHID Fingertips data programmatically, ensuring that the data 
+extraction process is transparent, documented, and reproducible. All 
+indicator IDs, area type codes, and data processing steps are specified 
+in the code. The complete analysis code is available at 
+https://github.com/usman-adamu for independent verification and 
+replication. Readers should note that OHID periodically updates Fingertips data; 
+results may therefore differ marginally if the analysis 
+is reproduced at a later date using the same indicator IDs.
 
 ## References
 
