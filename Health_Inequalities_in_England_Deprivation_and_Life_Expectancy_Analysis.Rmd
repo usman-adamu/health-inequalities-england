@@ -28,7 +28,7 @@ library(rnaturalearthdata)
 
 Health inequalities remain one of the most persistent challenges facing 
 public health in England. Life expectancy, a fundamental measure of 
-population health, varies substantially across geographic areas and 
+population health varies substantially across geographic areas and 
 socioeconomic groups, reflecting deep-rooted structural inequalities in 
 the social determinants of health. The relationship between deprivation 
 and life expectancy has been extensively documented, with the Marmot Review 
@@ -53,7 +53,7 @@ deprived areas.
 3. What is the geographic distribution of life expectancy across 
    English local authorities?
 4. Is there a statistically significant relationship between 
-   deprivation and life expectancy at the local authority level?
+   deprivation and life expectancy at local authority level?
 5. Does the relationship between deprivation and life expectancy 
    differ by sex?
 6. How does inequality in life expectancy between the most and least 
@@ -61,7 +61,19 @@ deprived areas.
 7. How does total life expectancy compare to healthy life expectancy, 
    and how has this gap changed over time?
 
-## Data and Methods
+## Methods
+
+### Study Design
+
+This is an ecological cross-sectional analysis using routinely collected, 
+publicly available surveillance data from the OHID Fingertips platform. 
+The primary unit of analysis is the local authority (Counties and Unitary 
+Authorities from April 2023 (AreaTypeID 502) in England. A longitudinal 
+component is incorporated for national trend analyses, using England-level 
+aggregated time series data spanning 2001 to 2024. Ecological study designs 
+allow population-level patterns and associations to be examined efficiently 
+using routine data, though findings cannot be assumed to hold at the 
+individual level.^12^
 
 ### Data Source
 
@@ -74,6 +86,67 @@ authority level (Counties and Unitary Authorities from April 2023):
 - **Deprivation score — IMD 2019** (Indicator 93553)
 - **Inequality in life expectancy at birth** (Indicator 92901)
 
+All data are publicly available, aggregate, and anonymised at the area level. 
+Data were accessed on 9 April 2026. Life expectancy estimates are presented 
+as three-year rolling averages, which reduce year-to-year random variation 
+and are the standard formats used by ONS and OHID for local authority 
+reporting.^1^
+
+### Statistical Methods
+
+The following analytical approaches were applied sequentially to address 
+the seven research questions:
+
+1. **National trend analysis** — Descriptive time series of life expectancy 
+   at birth for England by sex from 2001–03 to 2022–24, using three-year 
+   rolling average values extracted from the Fingertips platform.
+2. **Local authority variation** — Identification of the ten local authorities 
+   with the highest and lowest female life expectancy at birth in 2022-24, 
+   visualised using ranked bar charts.
+3. **Geographic mapping** — Choropleth mapping of female life expectancy 
+   across English local authorities using the tmap and rnaturalearth packages, 
+   with area boundaries joined to the Fingertips data by local authority name.
+4. **Deprivation regression (female)** — Simple linear regression of female 
+   life expectancy (outcome) on IMD 2019 deprivation score (exposure) at 
+   local authority level, with the coefficient of determination (R²) 
+   reported as a measure of explanatory power.
+5. **Sex-stratified regression comparison** — Equivalent linear regression 
+   models fitted separately for males and females, with regression slopes 
+   (β coefficients) compared to quantify differential deprivation effects 
+   by sex.
+6. **Inequality trend analysis** — Descriptive time series of the 
+   life expectancy gap between the most and least deprived areas 
+   in England by sex, using the OHID inequality indicator (Indicator 92901).
+7. **Healthy life expectancy comparison** — Stacked bar chart comparing 
+   years spent in good health versus years spent in poor health by sex 
+   across available time periods, derived by subtracting healthy life 
+   expectancy from total life expectancy.
+
+All analyses were conducted in R (version 4.3 or later) using the 
+tidyverse, fingertipsR, ggplot2, tmap, sf, rnaturalearth, and 
+rnaturalearthdata packages. A significance threshold of p < 0.05 
+was applied for all statistical tests.
+
+### Ethical Considerations
+
+All data used in this analysis are publicly available, aggregate, and 
+fully anonymised at the area level. No individual-level data were accessed 
+at any stage of the analysis. In accordance with standard guidance for 
+analyses of publicly available, non-identifiable data, no formal ethical 
+approval was required for this study.
+
+### Data Reproducibility
+
+This analysis was conducted entirely in R using the fingertipsR package 
+to access OHID Fingertips data programmatically, ensuring that the data 
+extraction process is transparent, documented, and reproducible. All 
+indicator IDs, area type codes, and data processing steps are specified 
+in the code. The complete analysis code is available at 
+https://github.com/usman-adamu for independent verification and 
+replication. Readers should note that Fingertips data are periodically 
+updated by OHID; results may therefore differ marginally if the analysis 
+is reproduced at a later date using the same indicator IDs.
+
 ```{r packages, include=FALSE}
 library(fingertipsR)
 library(tidyverse)
@@ -82,6 +155,7 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 ```
+
 
 ```{r load-data, results='hide'}
 life_expectancy <- fingertips_data(
@@ -140,7 +214,6 @@ The chart below shows how life expectancy at birth has changed in
 England over two decades, by sex.
 
 ```{r national-trend}
-# Replaced deprecated size= with linewidth= in geom_line.
 ggplot(le_england, aes(x = Timeperiod, y = Value, 
                         colour = Sex, group = Sex)) +
   geom_line(linewidth = 1.2) +
@@ -166,7 +239,7 @@ Life expectancy at birth in England increased steadily in both sexes
 between 2001-03 and 2012-14, consistent with sustained improvements 
 in healthcare, medicines, vaccination coverage and socioeconomic 
 conditions during this period.^1,2^ However, this improvement stalled 
-markedly after 2012-14 and remained largely static until 2018-20, 
+markedly after 2012-14 and remained largely static until 2018-20,  
 a pattern attributed in the literature to the effects of austerity 
 policies, stagnating income growth and widening social inequalities 
 following the 2008 financial crisis.^3^ A sharp decline in life 
@@ -247,7 +320,7 @@ Considerable geographic variation in life expectancy exists across
 English local authorities, with a clear North-South gradient apparent 
 in the 2022-24 data. Local authorities with the highest life expectancy 
 are predominantly concentrated in southern England, while those with 
-the lowest are located in northern regions — consistent with the 
+the lowest are located in northern regions, consistent with the 
 established health inequality gradient documented extensively in the 
 Marmot Reviews.^3,6^ A female child born in Kensington and Chelsea 
 would expect to live approximately eight years longer than her 
@@ -261,7 +334,7 @@ housing quality, educational attainment and access to services,
 factors that cluster geographically and compound over time.^3^ It 
 should be noted that life expectancy alone provides an incomplete 
 picture of population health. Healthy life expectancy, the number 
-of years lived in good health is an equally important measure, as 
+of years lived in good health, is an equally important measure, as 
 it captures the quality as well as the quantity of life. Evidence 
 consistently shows that the healthy life expectancy gap between 
 deprived and affluent areas is substantially wider than the life 
@@ -289,7 +362,7 @@ england_boundaries <- ne_states(country = "united kingdom",
                                "South Western",
                                "Eastern"))
 
-# Name mismatches fixed
+# Fix name mismatches
 le_la_map <- le_la %>%
   dplyr::mutate(AreaName = dplyr::recode(AreaName,
     "Windsor and Maidenhead" = "Royal Borough of Windsor and Maidenhead",
@@ -324,7 +397,7 @@ tm_shape(england_map) +
 
 The choropleth map confirms the North-South gradient observed in the 
 bar charts, with darker green shading, indicating higher life 
-expectancy — concentrated predominantly in southern England, 
+expectancy, concentrated predominantly in southern England, 
 particularly in London, the South East and the South West. While 
 isolated areas of higher life expectancy exist across the country, 
 the overall spatial pattern is consistent with evidence identifying 
@@ -351,7 +424,6 @@ cat("Number of matched local authorities:", nrow(le_dep), "\n")
 ```
 
 ```{r deprivation-scatter}
-# Replaced deprecated size= with linewidth= in geom_smooth.
 ggplot(le_dep, aes(x = deprivation_score, y = Value)) +
   geom_point(colour = "#2196F3", size = 3, alpha = 0.7) +
   geom_smooth(method = "lm", colour = "#FF5722", 
@@ -389,7 +461,7 @@ across England, and with more recent evidence demonstrating that
 socioeconomic deprivation remains the dominant driver of geographic 
 health inequalities.^3,6^ The presence of a small number of outlying 
 local authorities, those with higher or lower life expectancy than 
-predicted by their deprivation score alone suggests that additional 
+predicted by their deprivation score alone, suggests that additional 
 factors including local health service quality, population composition, 
 migration patterns and environmental conditions may modify the 
 relationship between deprivation and mortality in specific localities. 
@@ -423,7 +495,6 @@ summary(male_model)
 ```
 
 ```{r combined-scatter}
-# Replaced deprecated size= with linewidth= in geom_smooth.
 # Combine male and female data
 le_la_female <- le_la %>%
   dplyr::rename(le_value = Value) %>%
@@ -472,13 +543,13 @@ is more tightly determined by area-level deprivation than female
 life expectancy, and that males lose approximately 0.03 additional 
 years of life per deprivation unit compared to females.^3,6^
 
-The combined scatter plot illustrates these differential gradients clearly, 
-while females maintain a higher life expectancy than males 
+The combined scatter plot illustrates these differential gradients 
+clearly, while females maintain higher life expectancy than males 
 at every level of deprivation, the male regression line is visibly 
 steeper, indicating that the penalty of living in a deprived area 
 is greater for men than for women. This pattern is consistent with 
 evidence that men in deprived areas face disproportionately higher 
-mortality from cardiovascular disease, suicide, and alcohol-related 
+mortality from cardiovascular disease, suicide, alcohol-related 
 conditions and occupational hazards, causes of death that are 
 strongly socially patterned and more prevalent among men.^9^ These 
 findings reinforce the case for gender-sensitive public health 
@@ -489,7 +560,6 @@ interventions.^3,9^
 ### 6. Inequality in Life Expectancy Across England
 
 ```{r inequality}
-# Replaced deprecated size= with linewidth= in geom_line.
 inequality_clean <- inequality_le %>%
   dplyr::filter(AreaName == "England",
                 !is.na(Value)) %>%
@@ -548,7 +618,6 @@ expectancy at birth in England over time, highlighting the years
 spent in poor health.
 
 ```{r healthy-le, results='hide'}
-
 # Get healthy life expectancy England trend
 hle_england <- healthy_life_expectancy %>%
   dplyr::filter(AreaName == "England",
@@ -639,6 +708,60 @@ population wellbeing.^3^ Healthy life expectancy should be adopted
 as a primary outcome measure in public health planning alongside 
 total life expectancy.^6^
 
+## Limitations
+
+Several limitations should be considered when interpreting the findings 
+of this analysis.
+
+**Ecological fallacy.** All analyses were conducted at the local authority 
+level. The associations observed between area-level deprivation and life 
+expectancy cannot be assumed to hold at the individual level, a 
+phenomenon known as the ecological fallacy.^12^ Individual-level data 
+would be required to confirm whether the associations identified here 
+operate through the same mechanisms at the person level.
+
+**Deprivation data currency.** The deprivation measure used (IMD 2019) 
+predates the COVID-19 pandemic and the subsequent cost-of-living crisis, 
+both of which are likely to have materially altered the socioeconomic 
+profile of many local authorities. The true contemporary relationship 
+between deprivation and life expectancy may therefore differ from that 
+estimated here, and the IMD 2019 index may underestimate current 
+deprivation in areas most severely affected by the post-pandemic economic 
+deterioration.
+
+**Univariable regression.** The regression models in Sections 4 and 5 
+include only the deprivation score as a predictor. Life expectancy is 
+determined by multiple interacting factors, including ethnicity, rurality, 
+access to healthcare, environmental quality and population age structure. 
+The high R² values observed may partly reflect the correlation between 
+deprivation and these unmeasured variables rather than a direct 
+deprivation-only effect. Multivariable modelling would be required to 
+isolate the independent contribution of deprivation.
+
+**Geographic boundary mismatches.** Joining Fingertips local authority 
+data to rnaturalearth boundaries required manual name recoding due to 
+inconsistencies in naming conventions. Some local authority boundaries 
+used by OHID do not have exact equivalents in the rnaturalearth dataset, 
+necessitating approximations (for example, mapping Cumberland and 
+Westmorland and Furness to the legacy Cumbria boundary). This may have 
+introduced minor inaccuracies in the choropleth map.
+
+**Sex-limited geographic analysis.** The geographic bar charts and 
+choropleth map presents female life expectancy only. Male geographic 
+variation across local authorities was not visualised, which means 
+spatial patterns of male life expectancy inequality cannot be directly 
+assessed from this analysis.
+
+**Causality.** This is a cross-sectional ecological analysis. No causal 
+inferences can be drawn from the associations identified. Observed 
+relationships between deprivation and life expectancy are consistent 
+with a causal pathway, but cannot confirm one.
+
+**Data updates.** Fingertips data are periodically revised by OHID. The 
+specific values reported here reflect the data available at the time of 
+access (9 April 2026) and may differ from values available at other times 
+points.
+
 ## Conclusion
 
 This report examined health inequalities in England through the lens 
@@ -666,7 +789,7 @@ approximately three to four years.^5^
 
 A clear North-South gradient exists in life expectancy across 
 English local authorities, with local authorities in southern 
-England — particularly London and the South East, consistently 
+England, particularly London and the South East, consistently 
 showing higher life expectancy than those in northern regions. 
 A female child born in the local authority with the highest life 
 expectancy would expect to live approximately eight years longer 
@@ -676,7 +799,7 @@ social determinants of health.^3,6^
 
 **3. Deprivation as the dominant predictor — with greater impact on males**
 
-Linear regression confirmed that the deprivation score explained 
+Linear regression confirmed that deprivation score explained 
 66.7% of the variance in female life expectancy (β = -0.163, 
 p < 0.001) and 79.8% of the variance in male life expectancy 
 (β = -0.191, p < 0.001) across local authorities. Males lose 
@@ -710,6 +833,64 @@ was observed following 2020, consistent with evidence that the
 COVID-19 pandemic disproportionately increased mortality in the 
 most deprived areas, actively exacerbating pre-existing inequalities 
 rather than merely preserving them.^10,11^
+
+### Recommendations
+
+The findings of this analysis support the following evidence-based 
+recommendations for public health policy and practice.
+
+**1. Prioritise upstream action on the social determinants of health.**
+Given that deprivation alone explains up to 79.8% of the variance in 
+local authority life expectancy, clinical interventions alone are 
+insufficient to close the health gap. National and local government 
+should prioritise sustained investment in income support, affordable 
+housing, employment, and educational attainment, particularly in 
+persistently deprived northern local authorities.^3,6^
+
+**2. Adopt healthy life expectancy as a co-primary outcome in public 
+health planning.**
+Total life expectancy masks the substantial burden of years lived in 
+poor health. NHS England, integrated care boards and local authorities 
+should formally adopt healthy life expectancy as a co-primary planning 
+outcome alongside total life expectancy, ensuring that commissioning 
+decisions are evaluated against both quantity and quality of life.^6^
+
+**3. Implement targeted post-pandemic recovery strategies in the most 
+deprived areas.**
+The widening of the life expectancy inequality gap post-2020 signals 
+that the COVID-19 pandemic disproportionately set back health outcomes 
+in already disadvantaged communities. Dedicated, place-based recovery 
+programmes, modelled on Marmot Place initiatives, should be 
+prioritised in those local authorities where the gap widened most 
+sharply.^11^
+
+**4. Develop gender-sensitive strategies targeting male excess mortality 
+in deprived areas.**
+The steeper deprivation gradient observed in males, and the 
+disproportionate contribution of cardiovascular disease, suicide, 
+alcohol-related conditions and occupational hazards to male excess 
+mortality, requires sex-disaggregated public health strategies. 
+Programmes targeting male health-seeking behaviour, mental health, 
+and substance misuse in deprived areas should be developed alongside 
+broader structural interventions.^9^
+
+**5. Strengthen surveillance and monitoring of healthy life expectancy 
+inequality.**
+Current national monitoring focuses predominantly on total life 
+expectancy inequality. OHID and NHS England should expand routine 
+reporting to include the healthy life expectancy gap between the most 
+and least deprived areas, enabling a more complete picture of health 
+inequality trends to inform policy.^13^
+
+**6. Commission further analytical work using multivariable and 
+individual-level data.**
+The ecological, univariable approach used in this analysis, while 
+suitable for identifying population-level patterns, cannot establish 
+causality or isolate the independent effect of deprivation from 
+confounders. Multivariable analyses using linked individual-level 
+datasets, such as the Clinical Practice Research Datalink or the 
+Health Survey for England would strengthen the evidence base for 
+targeted interventions.
 
 ## References
 
