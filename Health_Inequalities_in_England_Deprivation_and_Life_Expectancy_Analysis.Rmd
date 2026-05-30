@@ -887,9 +887,9 @@ to access OHID Fingertips data programmatically, ensuring that the data
 extraction process is transparent, documented, and reproducible. All 
 indicator IDs, area type codes, and data processing steps are specified 
 in the code. The complete analysis code is available at 
-https://github.com/usman-adamu for independent verification and 
-replication. Readers should note that OHID periodically updates Fingertips data; 
-results may therefore differ marginally if the analysis 
+https://usman-adamu.github.io/health-inequalities-england/ for independent
+verification and replication. Readers should note that OHID periodically
+updates Fingertips data; results may therefore differ marginally if the analysis 
 is reproduced at a later date using the same indicator IDs.
 
 ## References
