@@ -44,23 +44,23 @@ Data accessed: April 2026.
 Life expectancy increased across England over the study period, but geographic inequalities between local authorities persisted. A 6.7-year gap was identified between the most and least deprived local authorities — consistent with longstanding evidence on health inequalities in England.
 
 **2. Deprivation as a strong predictor of life expectancy**  
-Linear regression identified a statistically significant negative association between deprivation score and life expectancy (R² = 0.667, p < 0.001) — meaning deprivation alone explained **66.7% of the geographic variance** in life expectancy across English local authorities. This is substantially stronger than the deprivation-depression relationship, reflecting the direct and well-established pathway from material disadvantage to mortality risk.
+Linear regression identified a statistically significant negative association between deprivation score and life expectancy (R² = 0.667, p < 0.001), meaning deprivation alone explained **66.7% of the geographic variance** in life expectancy across English local authorities. This is substantially stronger than the deprivation-depression relationship, reflecting the direct and well-established pathway from material disadvantage to mortality risk.
 
 **3. Sex-stratified differences in the deprivation gradient**  
 The relationship between deprivation and life expectancy was significant for both sexes, but the gradient differed in magnitude. Separate regression models for males and females confirmed that the deprivation penalty on life expectancy was not uniform across sex, with males in the most deprived areas facing a steeper absolute disadvantage.
 
 **4. The healthy life expectancy paradox**  
-Analysis of the gap between total and healthy life expectancy revealed that more deprived areas face a compounded disadvantage: not only do residents live shorter lives, but a greater proportion of those shorter lives is spent in poor health. This healthy life expectancy paradox — whereby deprivation simultaneously reduces life expectancy and compresses years of good health — was confirmed and quantified across deprivation quintiles.
+Analysis of the gap between total and healthy life expectancy revealed that more deprived areas face a compounded disadvantage: not only do residents live shorter lives, but a greater proportion of those shorter lives is spent in poor health. This healthy life expectancy paradox, whereby deprivation simultaneously reduces life expectancy and compresses years of good health, was confirmed and quantified across deprivation quintiles.
 
 ---
 
 ## Methodology
 
-- **Trend analysis:** Life expectancy trends plotted across the study period at local authority level
+- **Trend analysis:** Life expectancy trends plotted across the study period at the local authority level
 - **Deprivation regression:** Scatter plots with linear regression fits; Pearson correlation and R² reported
 - **Sex-stratified regression:** Separate regression models for male and female life expectancy against deprivation, with comparison of gradients
 - **Quintile analysis:** Life expectancy and healthy life expectancy compared across IMD deprivation quintiles, with error bars representing standard error
-- **Healthy life expectancy gap analysis:** The absolute gap between total LE and healthy LE calculated and plotted across quintiles to quantify the paradox
+- **Healthy life expectancy gap analysis:** The absolute gap between total LE and healthy LE is calculated and plotted across quintiles to quantify the paradox
 - **All citations:** Vancouver style, drawing on peer-reviewed UK public health and health inequalities literature
 
 ---
@@ -98,7 +98,7 @@ install.packages(c("fingertipsR", "tidyverse", "tmap", "sf",
 
 4. Click **Knit** — data are fetched live from the OHID Fingertips API
 
-> **Note:** Live API calls mean rendering requires an internet connection. Data values may differ slightly if accessed after April 2026 as Fingertips is updated regularly.
+> **Note:** Live API calls mean rendering requires an internet connection. Data values may differ slightly if accessed after April 2026, as Fingertips is updated regularly.
 
 ---
 
@@ -115,4 +115,4 @@ Full reference list available in the rendered report.
 
 ---
 
-*This project is part of a public health data analytics portfolio developed using real NHS data. All analysis is conducted for educational and professional development purposes.*
+*This project is part of a public health data analytics portfolio developed using real NHS data. All analyses are conducted for educational and professional development purposes.*
